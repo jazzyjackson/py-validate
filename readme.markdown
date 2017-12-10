@@ -35,5 +35,6 @@ samples = pandas.DataFrame(numpy.random.rand(valid.rows, valid.cols))
 ```
 Messages can be passed back as JSON using `valid.output()` and `valid.error`. If the program is being run as a streaming API, an environment variable should be set on PYTHONUNBUFFERED so results are printed right away. Otherwise, all the messages are collected into a single output object that is printed on program exit.
 
-Paired with Poly-Int Polymorphic Interface, you can have a 
-Paired with chatscript, you can ping a python script to find out what it needs, collect the necessary variables through conversation, and execute the script passing in required and optional variables.
+Paired with Poly-Int Polymorphic Interface, you can have a web interface that generates the proper form necessary (including date, number, and text inputs depending on your specified type) and allows you to customize the presentation of the result.
+
+Paired with ChatScript, you can ping a python script to find out what it needs, collect the necessary variables through conversation, and execute the script passing in required and optional variables.
