@@ -2,18 +2,22 @@ import ConfigParser
 import psycopg2
 import os, re, sys, json
 import time, datetime
+import atexit
 
 class parameters(object):
     def __init__(this, args):
-        # try:
+        # try:        
         this.args = args
         this.input = json.loads(sys.argv[1])
         # I wanted a switch statement to convert each parameters based on the type, don't have a plan on using floats as input yet... will have to think about unicode
         this.convert = {
-            'text':   lambda v: str(v),
-            'number': lambda v: int(v),
-            'date':   lambda v: datetime.datetime.strptime(v,'%Y-%m-%d')
+            'str':   lambda v: str(v),
+            'int':   lambda v: int(v),
+            'bool':  lambda v: bool(v),
+            'float': lambda v: float(v),
+            'date':  lambda v: datetime.datetime.strptime(v,'%Y-%m-%d')
         }
+        
         for key in this.input:
             # iterate through input object and set value of associated parameter
             # this way when this.args spits the object back, the form will have
@@ -38,7 +42,7 @@ class parameters(object):
                                                     + this.args['required'][key]['desc'] 
                                                     + '\nRegex Failed To Match:\n' 
                                                     + this.args['required'][key]['regex']
-                                                    + '\n' + this.args['required'][key]['help'] + '\n')
+                                                    + '\n' + this.args['required'][key].get('help','') + '\n')
             # addtionally, overwrite our input with what the regex extracted
             # so your regex can actually pull out valid matches
             inputType = this.args['required'][key]['type']
@@ -54,9 +58,9 @@ class parameters(object):
             match = checkArgs.findall(this.input[key])
             if(len(match) == 0):
                 raise SyntaxWarning('Optional value ' + this.input[key] 
-                                                        + 'will be discarded because it did not match required regex:\n' 
+                                                        + ' will be discarded because it did not match required regex:\n' 
                                                         + this.args['optional'][key]['regex']
-                                                        + '\n' + this.args['optional'][key]['help'] + '\n')
+                                                        + '\n' + this.args['optional'][key].get('help','') + '\n')
 
             inputType = this.args['optional'][key]['type']
             inputValue = match[0]
@@ -83,9 +87,7 @@ class parameters(object):
         # Offspring.js should be upgraded to handled this
         # but until then, force a gap between retuning error
         # and retuning required/optional parameters
-        time.sleep(0.25)
-        this.output(this.args)
-        time.sleep(0.25)
+
 
         if(this.args.get('mysql') != None):
             credentialpath = os.environ['SPIDERROOT'] + '/' + this.args['database'] + '/credentials.ini'
@@ -114,10 +116,10 @@ class parameters(object):
         # else:
             # this.whole 
             # merge object to return 
-            # atexit.register(this.outputOnExit)
     
-    def outputOnExit(this):
-        print(json.dumps(this.whole))
+    # def outputOnExit(this):
+    #     # print(json.dumps(this.__dict__.))
+    #     print(this.__dict__)
 # it'd be pretty cool if this checked the PYTHONUNBUFFERED variable, 
 # and its assumed that pyvalidate is running inside an event based API if output is unbuffed
 # and prints every time output is called, 

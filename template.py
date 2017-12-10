@@ -5,22 +5,33 @@ import pyvalidate
 valid = pyvalidate.parameters({
     "required": {
         "rows": {
-            "type":"number",
-            "default":"10",
+            "input":"number",
+            "type":"int",
+            "example":"10",
             "regex":"^\d+$",
-            "desc":"Number of rows"
+            "info":"Number of rows"
         },
         "cols": {
-            "type":"number",
-            "default":"10",
+            "input":"number",
+            "type":"int",        
+            "example":"10",
             "regex":"^\d+$",
-            "desc":"Number of columns"  
+            "info":"Number of columns"  
+        },
+    # },
+    # "optional": {
+        "labels": {
+            "input":"text",
+            "type":"bool",
+            "example":"true or false",
+            "regex":"^(true|false)$",
+            "info":"Whether to print row and column labels"  
         }
-    },
+    }
 })
 # Guassian distribution
 samples = pandas.DataFrame(numpy.random.rand(valid.rows, valid.cols))
 filename = str(valid.rows) + "x" + str(valid.cols) + '.csv'
-samples.to_csv(filename)
-valid.output("Here's your 3 x 5 random table")
+samples.to_csv(filename, index=valid.labels, header=valid.labels)
+valid.output("Here's your " + str(valid.rows) + " x " + str(valid.cols) +" random table")
 valid.output({ 'src': filename })
