@@ -18,13 +18,13 @@ valid = pyvalidate.parameters({
             "regex":"^\d+$",
             "info":"Number of columns"  
         },
-    # },
-    # "optional": {
+    },
+    "optional": {
         "labels": {
             "input":"text",
             "type":"bool",
             "example":"true or false",
-            "regex":"^(true|false)$",
+            "regex":"(?i)^(true|false)$",
             "info":"Whether to print row and column labels"  
         }
     }
@@ -32,6 +32,9 @@ valid = pyvalidate.parameters({
 # Guassian distribution
 samples = pandas.DataFrame(numpy.random.rand(valid.rows, valid.cols))
 filename = str(valid.rows) + "x" + str(valid.cols) + '.csv'
-samples.to_csv(filename, index=valid.labels, header=valid.labels)
+samples.to_csv(
+    filename, 
+    index=valid.get('labels',False),  # print row labels
+    header=valid.get('labels',False)) # print column labels
 valid.output("Here's your " + str(valid.rows) + " x " + str(valid.cols) +" random table")
 valid.output({ 'src': filename })

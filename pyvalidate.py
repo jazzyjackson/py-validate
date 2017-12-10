@@ -13,8 +13,8 @@ class parameters(object):
         this.convert = {
             'str':   lambda v: str(v),
             'int':   lambda v: int(v),
-            'bool':  lambda v: bool(v),
             'float': lambda v: float(v),
+            'bool':  lambda v: True if v.lower() == 'true' else False,
             'date':  lambda v: datetime.datetime.strptime(v,'%Y-%m-%d')
         }
         
@@ -116,6 +116,8 @@ class parameters(object):
         # else:
             # this.whole 
             # merge object to return 
+    def get(this, key, default):
+        return this.__dict__.get(key, default)
     
     # def outputOnExit(this):
     #     # print(json.dumps(this.__dict__.))
