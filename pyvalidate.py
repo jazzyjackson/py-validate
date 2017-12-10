@@ -1,112 +1,123 @@
-import sys
 import ConfigParser
 import psycopg2
-import os
-import re
-import sys
-import json
-import time
+import os, re, sys, json
+import time, datetime
 
-class parameters:
-    def __init__(self, args):
-        try:
-            self.args = args
-            self.input = json.loads(sys.argv[1])
-            for key in self.input:
-                # iterate through input object and set value of associated parameter
-                # this way when self.args spits the object back, the form will have
-                # values set to the input values so you don't have to type them again
-                # and its useful as feedback too - what values were used
-                # if you sent a key with a typo, you will see its value is undefined
-                if(self.args['required'].get(key) != None):
-                    self.args['required'][key]['value'] = self.input[key]
-                if(self.args['optional'].get(key) != None):
-                    self.args['optional'][key]['value'] = self.input[key]
-            # try to access each required property in the input json
-            for key in self.args['required']:
-                requiredInput = self.input.get(key)
-                if(requiredInput == None):
-                    raise KeyError(key + " is a required parameter.")
-                self.output("Using '" + self.input[key] + "' for " + key + "\n")
-                checkArgs = re.compile(self.args['required'][key]['regex'])
-                match = checkArgs.findall(self.input[key])
-                if(len(match) == 0):
-                    raise SyntaxError(self.input[key] + ' did not appear to be ' 
-                                                      + self.args['required'][key]['desc'] 
-                                                      + '\nRegex Failed To Match:\n' 
-                                                      + self.args['required'][key]['regex']
-                                                      + '\n' + self.args['required'][key]['help'] + '\n')
-                # addtionally, overwrite our input with what the regex extracted
-                # so your regex can actually pull out valid matches
-                self.input[key] = match[0]
-            for key in self.args['optional']:
-                optionalInput = self.input.get(key)
-                if(optionalInput == None):
-                    continue # skip regex check if nothing is there, continue to next key
-                self.output("Using '" + self.input[key] + "' for " + key + "\n")
-                checkArgs = re.compile(self.args['optional'][key]['regex'])
-                match = checkArgs.findall(self.input[key])
-                if(len(match) == 0):
-                    raise SyntaxWarning('Optional value ' + self.input[key] 
-                                                          + 'will be discarded because it did not match required regex:\n' 
-                                                          + self.args['optional'][key]['regex']
-                                                          + '\n' + self.args['optional'][key]['help'] + '\n')
-                self.input[key] = match[0]                
-        except SyntaxError as e:
-            self.args["stderr"] = str(e)
-            self.output(self.args)
-            sys.exit()
-        except IndexError as e:
-            # IndexError means sys.argv didn't hear anything, return argument object
-            self.output(self.args)
-            sys.exit() 
-        except KeyError as e:
-            # This means keys weren't provided, echo the arg objet
-            self.args["stderr"] = str(e)
-            self.output(self.args)            
-            sys.exit()
-        except SyntaxWarning as e:
-            # print warnings to stderr, they should get displayed but the script will still run
-            self.args["stderr"] = str(e)
-            # Don't exit for SyntaxWarning, just print to stderr
+class parameters(object):
+    def __init__(this, args):
+        # try:
+        this.args = args
+        this.input = json.loads(sys.argv[1])
+        # I wanted a switch statement to convert each parameters based on the type, don't have a plan on using floats as input yet... will have to think about unicode
+        this.convert = {
+            'text':   lambda v: str(v),
+            'number': lambda v: int(v),
+            'date':   lambda v: datetime.datetime.strptime(v,'%Y-%m-%d')
+        }
+        for key in this.input:
+            # iterate through input object and set value of associated parameter
+            # this way when this.args spits the object back, the form will have
+            # values set to the input values so you don't have to type them again
+            # and its useful as feedback too - what values were used
+            # if you sent a key with a typo, you will see its value is undefined
+            # defaulting to empty dict so double get doesn't throw error on nonexistant keys
+            if(this.args.get('required', {}).get(key) != None):
+                this.args['required'][key]['value'] = this.input[key]
+            if(this.args.get('optional',{}).get(key) != None):
+                this.args['optional'][key]['value'] = this.input[key]
+        # try to access each required property in the input json
+        for key in this.args.get('required', {}):
+            requiredInput = this.input.get(key)
+            if(requiredInput == None):
+                raise KeyError(key + " is a required parameter.")
+            this.output("Using '" + this.input[key] + "' for " + key + "\n")
+            checkArgs = re.compile(this.args['required'][key]['regex'])
+            match = checkArgs.findall(this.input[key])
+            if(len(match) == 0):
+                raise SyntaxError(this.input[key] + ' did not appear to be ' 
+                                                    + this.args['required'][key]['desc'] 
+                                                    + '\nRegex Failed To Match:\n' 
+                                                    + this.args['required'][key]['regex']
+                                                    + '\n' + this.args['required'][key]['help'] + '\n')
+            # addtionally, overwrite our input with what the regex extracted
+            # so your regex can actually pull out valid matches
+            inputType = this.args['required'][key]['type']
+            inputValue = match[0]
+            this.__dict__[key] = this.convert[inputType](inputValue)
+    
+        for key in this.args.get('optional', {}):
+            optionalInput = this.input.get(key)
+            if(optionalInput == None):
+                continue # skip regex check if nothing is there, continue to next key
+            this.output("Using '" + this.input[key] + "' for " + key + "\n")
+            checkArgs = re.compile(this.args['optional'][key]['regex'])
+            match = checkArgs.findall(this.input[key])
+            if(len(match) == 0):
+                raise SyntaxWarning('Optional value ' + this.input[key] 
+                                                        + 'will be discarded because it did not match required regex:\n' 
+                                                        + this.args['optional'][key]['regex']
+                                                        + '\n' + this.args['optional'][key]['help'] + '\n')
+
+            inputType = this.args['optional'][key]['type']
+            inputValue = match[0]
+            this.__dict__[key] = this.convert[inputType](inputValue)
+        # except SyntaxError as e:
+        #     this.args["stderr"] = str(e)
+        #     this.output(this.args)
+        #     sys.exit()
+        # except IndexError as e:
+        #     # IndexError means sys.argv didn't hear anything, return argument object
+        #     this.output(this.args)
+        #     sys.exit() 
+        # except KeyError as e:
+        #     # This means keys weren't provided, echo the arg objet
+        #     this.args["stderr"] = str(e)
+        #     this.output(this.args)            
+        #     sys.exit()
+        # except SyntaxWarning as e:
+        #     # print warnings to stderr, they should get displayed but the script will still run
+        #     this.args["stderr"] = str(e)
+        #     # Don't exit for SyntaxWarning, just print to stderr
 
 		# even with unbuffered output my JSON was getting concatendated with stdout
         # Offspring.js should be upgraded to handled this
         # but until then, force a gap between retuning error
         # and retuning required/optional parameters
         time.sleep(0.25)
-        self.output(self.args)
+        this.output(this.args)
         time.sleep(0.25)
 
-        if(self.args.get('mysql') != None):
-            credentialpath = os.environ['SPIDERROOT'] + '/' + self.args['database'] + '/credentials.ini'
+        if(this.args.get('mysql') != None):
+            credentialpath = os.environ['SPIDERROOT'] + '/' + this.args['database'] + '/credentials.ini'
             dbKeys = ConfigParser.ConfigParser()
             dbKeys.read(credentialpath)
             try:
-                self.conn = psycopg2.connect("dbname='%(database)s' port='%(port)s' user='%(user)s' \
+                this.conn = psycopg2.connect("dbname='%(database)s' port='%(port)s' user='%(user)s' \
                     host='%(host)s' password='%(password)s'" % dict(dbKeys.items('comscore')))
-                self.output("Connection Established")
+                this.output("Connection Established")
             except:
-                self.output({"stderr":"Unable to connect to the database"})
+                this.output({"stderr":"Unable to connect to the database"})
                 sys.exit()
 
-    def cursor(self):
-        if(self.args['database'] != None):        
-            return self.conn.cursor()
+    def cursor(this):
+        if(this.args['database'] != None):        
+            return this.conn.cursor()
         else: 
             raise Exception("database parameter was not defined, so there is no connection.")
 
-    def output(self, stringOrDict):
+    def output(this, stringOrDict):
         # print stdout object if passed a string, else jsonify the dictionary passed to output
-        if os.environ['PYTHONUNBUFFERED']:
-            print(json.dumps({"stdout": stringOrDict + '\n'} if type(stringOrDict) == str else stringOrDict))
-        else:
-            # self.whole 
+        print(json.dumps({"stdout": stringOrDict + '\n'} if type(stringOrDict) == str else stringOrDict))
+        
+        # if os.environ['PYTHONUNBUFFERED']:
+        #     print(json.dumps({"stdout": stringOrDict + '\n'} if type(stringOrDict) == str else stringOrDict))
+        # else:
+            # this.whole 
             # merge object to return 
-            # atexit.register(self.outputOnExit)
+            # atexit.register(this.outputOnExit)
     
-    def outputOnExit(self):
-        print(json.dumps(self.whole))
+    def outputOnExit(this):
+        print(json.dumps(this.whole))
 # it'd be pretty cool if this checked the PYTHONUNBUFFERED variable, 
 # and its assumed that pyvalidate is running inside an event based API if output is unbuffed
 # and prints every time output is called, 

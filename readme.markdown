@@ -25,7 +25,7 @@ valid = pyvalidate.parameters({
 
 ```
 If the program is called with no input, the entire object is returned.
-If the program is called with a JSON object, it goes through the keys of that object to see if it has required parameters, and then inspects each parameter to make sure the regex matches. If any of this fails, the program exits and you're returned JSON which also includes an added 'input' key for each parameter representing the input it tried to use.
+If the program is called with a JSON object, it goes through the keys of that object to see if it has required parameters, and then inspects each parameter to make sure the regex matches. If any of this fails, the program exits and you're returned JSON which also includes an added 'value' key for each parameter representing the input it tried to use.
 
 TODO: If your regex includes matching groups, the input is replaced with the match allowing for simple input cleansing and prepartion. 
 
