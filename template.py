@@ -5,27 +5,24 @@ import pyvalidate
 valid = pyvalidate.parameters({
     "required": {
         "rows": {
-            "input":"number",
-            "type":"int",
-            "example":"10",
-            "regex":"^\d+$",
             "info":"Number of rows"
+            "type":"number:int",
+            "verify":"^\d+$",
+            "placeholder":"3"
         },
         "cols": {
-            "input":"number",
-            "type":"int",        
-            "example":"10",
-            "regex":"^\d+$",
             "info":"Number of columns"  
+            "type":"number:int",
+            "verify":"^\d+$",
+            "placeholder":"5"
         },
     },
     "optional": {
         "labels": {
-            "input":"text",
-            "type":"bool",
-            "example":"true or false",
-            "regex":"(?i)^(true|false)$",
             "info":"Whether to print row and column labels"  
+            "type":"text:bool",
+            "verify":"(?i)^(true|false)$",
+            "placeholder": "True or False"
         }
     }
 })

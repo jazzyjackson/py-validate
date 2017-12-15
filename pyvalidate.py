@@ -1,6 +1,6 @@
 import ConfigParser
 import psycopg2
-import os, re, sys, json
+import os, re, sys, json, io
 import time, datetime
 import atexit
 
@@ -10,12 +10,20 @@ class parameters(object):
         this.args = args
         this.input = json.loads(sys.argv[1])
         # I wanted a switch statement to convert each parameters based on the type, don't have a plan on using floats as input yet... will have to think about unicode
-        this.convert = {
-            'str':   lambda v: str(v),
-            'int':   lambda v: int(v),
-            'float': lambda v: float(v),
-            'bool':  lambda v: True if v.lower() == 'true' else False,
-            'date':  lambda v: datetime.datetime.strptime(v,'%Y-%m-%d')
+        this.typecast = {
+            # type is HTML form input type : followed by python type
+            'number:int': lambda v: int(v),
+            'number:float': lambda v: float(v),
+            
+            'text:str': lambda v: str(v),
+            'text:unicode': lambda v: unicode(v),
+            'text:tuple': lambda v: tuple([x.strip() for x in v.split(',')]),
+            'text:bool': lambda v: True if v.lower() == 'true' else False,
+
+            'text:buffer': lambda v: io.open(v, mode='wt') # if form input was text, open file for writing
+            'file:buffer': lambda v: io.open(v, mode='rt') # if form input was a file, open file for reading
+            
+            'date:date': lambda v: datetime.datetime.strptime(v,'%Y-%m-%d'),
         }
         
         for key in this.input:
@@ -47,7 +55,7 @@ class parameters(object):
             # so your regex can actually pull out valid matches
             inputType = this.args['required'][key]['type']
             inputValue = match[0]
-            this.__dict__[key] = this.convert[inputType](inputValue)
+            this.__dict__[key] = this.typecast[inputType](inputValue)
     
         for key in this.args.get('optional', {}):
             optionalInput = this.input.get(key)
