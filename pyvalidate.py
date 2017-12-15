@@ -12,18 +12,18 @@ class parameters(object):
         # I wanted a switch statement to convert each parameters based on the type, don't have a plan on using floats as input yet... will have to think about unicode
         this.typecast = {
             # type is HTML form input type : followed by python type
-            'number:int': lambda v: int(v),
-            'number:float': lambda v: float(v),
+            'number:int':   lambda x: int(x),
+            'number:float': lambda x: float(x),
             
-            'text:str': lambda v: str(v),
-            'text:unicode': lambda v: unicode(v),
-            'text:tuple': lambda v: tuple([x.strip() for x in v.split(',')]),
-            'text:bool': lambda v: True if v.lower() == 'true' else False,
+            'text:str':     lambda x: str(x),
+            'text:unicode': lambda x: unicode(x),
+            'text:tuple':   lambda x: tuple([i.strip() for i in x.split(',')]),
+            'text:bool':    lambda x: True if x.lower() == 'true' else False,
 
-            'text:buffer': lambda v: io.open(v, mode='wt') # if form input was text, open file for writing
-            'file:buffer': lambda v: io.open(v, mode='rt') # if form input was a file, open file for reading
+            'text:buffer':  lambda x: io.open(x, mode='wt') # if form input was text, open file for writing
+            'file:buffer':  lambda x: io.open(x, mode='rt') # if form input was a file, open file for reading
             
-            'date:date': lambda v: datetime.datetime.strptime(v,'%Y-%m-%d'),
+            'date:date':    lambda x: datetime.datetime.strptime(x,'%Y-%m-%d'),
         }
         
         for key in this.input:
