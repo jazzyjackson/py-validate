@@ -1,17 +1,19 @@
 #!/bin/bash condavision python=2.7
+# must be run with pyvalidate in PYTHONPATH
+# condavision uses PYTHONPATH to check dependencies
 import pandas,numpy
 import pyvalidate
 
 valid = pyvalidate.parameters({
     "required": {
         "rows": {
-            "info":"Number of rows"
+            "info":"Number of rows",
             "type":"number:int",
             "verify":"^\d+$",
             "placeholder":"3"
         },
         "cols": {
-            "info":"Number of columns"  
+            "info":"Number of columns",
             "type":"number:int",
             "verify":"^\d+$",
             "placeholder":"5"
@@ -19,7 +21,7 @@ valid = pyvalidate.parameters({
     },
     "optional": {
         "labels": {
-            "info":"Whether to print row and column labels"  
+            "info":"Whether to print row and column labels",
             "type":"text:bool",
             "verify":"(?i)^(true|false)$",
             "placeholder": "True or False"
@@ -33,5 +35,5 @@ samples.to_csv(
     filename, 
     index=valid.get('labels',False),  # print row labels
     header=valid.get('labels',False)) # print column labels
-valid.output("Here's your " + str(valid.rows) + " x " + str(valid.cols) +" random table")
+valid.output("Here's your " + str(valid.rows) + " x " + str(valid.cols) + " random table")
 valid.output({ 'src': filename })

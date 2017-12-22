@@ -9,16 +9,16 @@ import pyvalidate
 valid = pyvalidate.parameters({
     "required": {
         "rows": {
-            "type":"number",
-            "default":"10",
-            "regex":"^\d+$",
-            "desc":"Number of rows"
+            "info":"Number of rows"
+            "type":"number:int",
+            "valid":"^\d+$",
+            "placeholder":"10",
         },
         "cols": {
-            "type":"number",
-            "default":"10",
-            "regex":"^\d+$",
-            "desc":"Number of columns"  
+            "info":"Number of columns"  
+            "type":"numbe:intr",
+            "valid":"^\d+$",
+            "placeholder":"5",
         }
     },
 })
@@ -33,7 +33,7 @@ In the rest of the program, you can refer to the parameters like :
 ```py
 samples = pandas.DataFrame(numpy.random.rand(valid.rows, valid.cols))
 ```
-Messages can be passed back as JSON using `valid.output()` and `valid.error`. If the program is being run as a streaming API, an environment variable should be set on PYTHONUNBUFFERED so results are printed right away. Otherwise, all the messages are collected into a single output object that is printed on program exit.
+Messages can be passed back as JSON using `valid.output()` and `valid.error()`. If the program is being run as a streaming API, an environment variable should be set on PYTHONUNBUFFERED so results are printed right away. Otherwise, all the messages are collected into a single output object that is printed on program exit.
 
 Paired with Poly-Int Polymorphic Interface, you can have a web interface that generates the proper form necessary (including date, number, and text inputs depending on your specified type) and allows you to customize the presentation of the result.
 
