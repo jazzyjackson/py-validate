@@ -1,32 +1,34 @@
 import ConfigParser
-import psycopg2
-import os, re, sys, json, io
+import os, re, sys, json, io, atexit
 import time, datetime
-import atexit
 
+APPROOT = os.environ.get('APPROOT') or '.' # if APPROOT is not set, 
 class parameters(object):
     def __init__(self, args):
         try:        
             self.args = args
             self.result = {}
-            self.input = json.loads(sys.argv[1])
-            # I wanted a switch statement to convert each parameters based on the type, don't have a plan on using floats as input yet... will have to think about unicode
+            self.input = json.loads(sys.argv[1] if len(sys.argv) == 2 else "{}") # incase no object was passed
             self.typecast = {
-                # type is HTML form input type : followed by python type
-                'number:int':   lambda x: int(x),
-                'number:float': lambda x: float(x),
+                # type is HTML form input type : followed by python type. file buffers are streams, s3 is an s3Object: .put(Body=STINGIO) to upload
+                'number::int':   lambda x: int(x),
+                'number::float': lambda x: float(x),
                 
-                'text:str':     lambda x: str(x),
-                'text:unicode': lambda x: unicode(x),
-                'text:tuple':   lambda x: tuple([i.strip() for i in x.split(',')]),
-                'text:bool':    lambda x: True if x.lower() == 'true' else False,
+                'text::str':     lambda x: str(x),
+                'text::unicode': lambda x: unicode(x),
+                'text::tuple':   lambda x: tuple([i.strip() for i in x.split(',')]),
+                'text::bool':    lambda x: True if x.lower() == 'true' else False,
 
-                'text:buffer':  lambda x: io.open(x, mode='wt'), # if form input was text, open file for writing
-                'file:buffer':  lambda x: io.open(x, mode='rt'), # if form input was a file, open file for reading
-                
-                'date:date':    lambda x: datetime.datetime.strptime(x,'%Y-%m-%d'),
+                # text input for name of output, file input for file to read from
+                'text::buffer':  lambda x: io.open(x, mode='wt'), # if form input was text, open file for writing
+                'file::buffer':  lambda x: io.open(x, mode='rt'), # if form input was a file, open file for reading
+                # text input for name of s3 output, file s3 for s3 file to read. 
+                # 'text:s3':      lambda x: boto3.resource('s3').GetObject(x.split('/')[0], x.split('/')[1:]) # should be able to READ this!
+                'file::s3':      lambda x: boto3.resource('s3').Object(x.split('/')[0], x.split('/')[1:]),    # you can .put(Body=STRING.IO) to thing!
+            
+                'date::date':    lambda x: datetime.datetime.strptime(x,'%Y-%m-%d'),
             }
-                
+
             for key in self.input:
                 # iterate through input object and set value of associated parameter
                 # self way when self.args spits the object back, the form will have
@@ -86,6 +88,11 @@ class parameters(object):
             self.error(str(e))
             self.output(self.args)
             sys.exit()
+        except ValueError as e:
+            # this means invalid JSON was passed, I think...
+            self.error(str(e))
+            self.output(self.args)
+            sys.exit()
         except SyntaxWarning as e:
             # print warnings to stderr, they should get displayed but the script will still run
             self.error(str(e))
@@ -96,27 +103,33 @@ class parameters(object):
         # but until then, force a gap between retuning error
         # and retuning required/optional parameters
 
+        database = None # database defaults to none if psql or mysql database is not named
+        # thankfully psycopg2 and pymysql use the same query api
+        if self.args.get('psql') != None:
+            import psycopg2 as database
+        elif self.args.get('mysql') != None:
+            import pymysql as database
 
-        if(self.args.get('mysql') != None):
-            credentialpath = os.environ['SPIDERROOT'] + '/' + self.args['database'] + '/credentials.ini'
+        if(database): # only load connection if database was named. name must correspond with a credentials.ini section.
             dbKeys = ConfigParser.ConfigParser()
-            dbKeys.read(credentialpath)
+            dbKeys.read('credentials.ini') # assumed that working directory is location of spider is location of credentials...
             try:
                 self.conn = psycopg2.connect("dbname='%(database)s' port='%(port)s' user='%(user)s' \
-                    host='%(host)s' password='%(password)s'" % dict(dbKeys.items('comscore')))
+                    host='%(host)s' password='%(password)s'" % dict(dbKeys.items(database)))
                 self.output("Connection Established")
             except:
                 self.output({"stderr":"Unable to connect to the database"})
                 sys.exit()
 
-    def cursor(self):
-        if(self.args['database'] != None):        
+
+    def cursor(self): # a getter method to return a database cursor
+        if(self.args.get('database')):        
             return self.conn.cursor()
         else: 
             raise Exception("database parameter was not defined, so there is no connection.")
 
     def error(self, string):
-        self.output({stderr: string})
+        self.output({"stderr": string})
     
     def output(self, stringOrDict):
         # strings passed to output will be wrapped in an object with key 'stdout'

@@ -1,4 +1,4 @@
-#!/bin/bash condavision python=2.7
+#!/bin/bash condavision
 # must be run with pyvalidate in PYTHONPATH
 # condavision uses PYTHONPATH to check dependencies
 import pandas,numpy
@@ -7,22 +7,22 @@ import pyvalidate
 valid = pyvalidate.parameters({
     "required": {
         "rows": {
-            "info":"Number of rows",
-            "type":"number:int",
-            "verify":"^\d+$",
-            "placeholder":"3"
+            "type":"number::int",
+            "info":"number of rows",
+            "placeholder":"for example: 3",
+            "verify":"^\d+$"
         },
         "cols": {
-            "info":"Number of columns",
-            "type":"number:int",
-            "verify":"^\d+$",
-            "placeholder":"5"
+            "type":"number::int",
+            "info":"number of columns",
+            "placeholder":"for example: 5",
+            "verify":"^\d+$"
         },
     },
     "optional": {
         "labels": {
+            "type":"text::bool",
             "info":"Whether to print row and column labels",
-            "type":"text:bool",
             "verify":"(?i)^(true|false)$",
             "placeholder": "True or False"
         }
