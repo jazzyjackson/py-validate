@@ -36,4 +36,4 @@ samples.to_csv(
     index=valid.get('labels',False),  # print row labels
     header=valid.get('labels',False)) # print column labels
 valid.output("Here's your " + str(valid.rows) + " x " + str(valid.cols) + " random table")
-valid.output({ 'src': filename })
+valid.output({'download': filename })

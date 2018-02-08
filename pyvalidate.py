@@ -44,22 +44,33 @@ class parameters(object):
                     self.args['optional'][key]['value'] = self.input[key]
             # try to access each required property in the input json
             for key in self.args.get('required', {}):
+                # print(self.args.get('required',{}).get(key, {}).get('value'))
+                # requiredInput = self.args.get('required',{}).get(key, {}).get('value')
                 requiredInput = self.input.get(key)
+                inputValue = None
+                inputType = self.args['required'][key]['type'] # if there's no type, should throw error, malformed input
+                # this if/if/else/else/if/else either sets input value or throws an error. godspeed.
                 if(requiredInput == None):
-                    raise KeyError(key + " is a required parameter.")
-                self.stdout("Using '" + self.input[key] + "' for " + key + "\n")
-                checkArgs = re.compile(self.args['required'][key]['verify'])
-                match = checkArgs.findall(self.input[key])
-                if(len(match) == 0):
-                    raise SyntaxError(self.input[key] + ' did not appear to be ' 
-                                                        + self.args['required'][key]['info'] 
-                                                        + '\nRegex Failed To Match:\n' 
-                                                        + self.args['required'][key]['verify']
-                                                        + '\n' + self.args['required'][key].get('help','') + '\n')
+                    if self.args.get('required',{}).get(key, {}).get('value', None):
+                        inputValue = self.args['required'][key]['value']
+                        self.stdout("Using '" + inputValue + "' for " + key + "\n") 
+                    else:
+                        raise KeyError(key + " is a required parameter.")
+                else:
+                    self.stdout("Using '" + self.input[key] + "' for " + key + "\n")
+                    checkArgs = re.compile(self.args['required'][key]['verify'])
+                    match = checkArgs.findall(self.input[key])
+                    if(len(match) == 0):
+                        raise SyntaxError(self.input[key] + ' did not appear to be ' 
+                                                            + self.args['required'][key]['info'] 
+                                                            + '\nRegex Failed To Match:\n' 
+                                                            + self.args['required'][key]['verify']
+                                                            + '\n' + self.args['required'][key].get('help','') + '\n')
+                    else:
+                        inputValue = match[0]
+                    
                 # addtionally, overwrite our input with what the regex extracted
                 # so your regex can actually pull out valid matches
-                inputType = self.args['required'][key]['type']
-                inputValue = match[0]
                 self.__dict__[key] = self.typecast[inputType](inputValue)
         
             for key in self.args.get('optional', {}):
@@ -123,7 +134,7 @@ class parameters(object):
                 self.stderr("Unable to connect to the database")
                 sys.exit()
         # here would be a good place to stop 
-        if(self.args.get('echo', None)):
+        if(self.input.get('echo', None)):
             self.output(self.args)            
             sys.exit()
 
