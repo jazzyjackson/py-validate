@@ -24,10 +24,13 @@ valid = pyvalidate.parameters({
 })
 
 ```
-If the program is called with no input, the entire object is returned.
-If the program is called with a JSON object, it goes through the keys of that object to see if it has required parameters, and then inspects each parameter to make sure the regex matches. If any of this fails, the program exits and you're returned JSON which also includes an added 'value' key for each parameter representing the input it tried to use.
 
-TODO: If your regex includes matching groups, the input is replaced with the match allowing for simple input cleansing and prepartion. 
+
+If the program is called with no input, the entire object is returned and the sender of an empty request will be able to see what's required of them.
+
+In order to call the program with the named parameters, a JSON string may be piped to stdin, or passed as the first argument. Either way, py-validate goes through the keys of that object to see if it has a 'required' key, and then inspects each parameter therein, testing the value with the 'verify' regex, exiting if there's no match. 
+
+The JSON input, at the top level, must have a 'required' object, and may also have an 'optional' object. It can also contain an 'echo' parameter. If it contains a value that Python's Boolean constructor coerces to 'true', then all the parameters are verified, and a filled out object is echo'd back. So if you provided all the required parameters, your object will be echoed back and contain 'value' keys. 
 
 In the rest of the program, you can refer to the parameters like :
 ```py
@@ -38,3 +41,5 @@ Messages can be passed back as JSON using `valid.output()` and `valid.error()`. 
 Paired with Poly-Int Polymorphic Interface, you can have a web interface that generates the proper form necessary (including date, number, and text inputs depending on your specified type) and allows you to customize the presentation of the result.
 
 Paired with ChatScript, you can ping a python script to find out what it needs, collect the necessary variables through conversation, and execute the script passing in required and optional variables.
+
+Paired with condavision, you can create new scripts that will run on the server without having to think about system configuration and dependencies.

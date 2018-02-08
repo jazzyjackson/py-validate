@@ -5,7 +5,9 @@ import time, datetime
 APPROOT = os.environ.get('APPROOT') or '.' # if APPROOT is not set, 
 class parameters(object):
     def __init__(self, args):
-        try:        
+        try:
+            # should also read stdin, allowing the JSON to be posted as the body of an HTTP request.
+            # stdin = readline
             self.args = args
             self.result = {}
             self.input = json.loads(sys.argv[1] if len(sys.argv) == 2 else "{}") # incase no object was passed
@@ -45,7 +47,7 @@ class parameters(object):
                 requiredInput = self.input.get(key)
                 if(requiredInput == None):
                     raise KeyError(key + " is a required parameter.")
-                self.output("Using '" + self.input[key] + "' for " + key + "\n")
+                self.stdout("Using '" + self.input[key] + "' for " + key + "\n")
                 checkArgs = re.compile(self.args['required'][key]['verify'])
                 match = checkArgs.findall(self.input[key])
                 if(len(match) == 0):
@@ -64,7 +66,7 @@ class parameters(object):
                 optionalInput = self.input.get(key)
                 if(optionalInput == None):
                     continue # skip regex check if nothing is there, continue to next key
-                self.output("Using '" + self.input[key] + "' for " + key + "\n")
+                self.stdout("Using '" + self.input[key] + "' for " + key + "\n")
                 checkArgs = re.compile(self.args['optional'][key]['verify'])
                 match = checkArgs.findall(self.input[key])
                 if(len(match) == 0):
@@ -77,7 +79,7 @@ class parameters(object):
                 inputValue = match[0]
                 self.__dict__[key] = self.convert[inputType](inputValue)
         except SyntaxError as e:
-            self.error(str(e))
+            self.stderr(str(e))
             self.output(self.args)
             sys.exit()
         except IndexError as e:
@@ -85,17 +87,17 @@ class parameters(object):
             self.output(self.args)
             sys.exit() 
         except KeyError as e:
-            self.error(str(e))
+            self.stderr(str(e))
             self.output(self.args)
             sys.exit()
         except ValueError as e:
             # this means invalid JSON was passed, I think...
-            self.error(str(e))
+            self.stderr(str(e))
             self.output(self.args)
             sys.exit()
         except SyntaxWarning as e:
             # print warnings to stderr, they should get displayed but the script will still run
-            self.error(str(e))
+            self.stderr(str(e))
             # Don't exit for SyntaxWarning, just print to stderr
 
 		# even with unbuffered output my JSON was getting concatendated with stdout
@@ -118,8 +120,12 @@ class parameters(object):
                     host='%(host)s' password='%(password)s'" % dict(dbKeys.items(database)))
                 self.output("Connection Established")
             except:
-                self.output({"stderr":"Unable to connect to the database"})
+                self.stderr("Unable to connect to the database")
                 sys.exit()
+        # here would be a good place to stop 
+        if(self.args.get('echo', None)):
+            self.output(self.args)            
+            sys.exit()
 
 
     def cursor(self): # a getter method to return a database cursor
@@ -128,9 +134,12 @@ class parameters(object):
         else: 
             raise Exception("database parameter was not defined, so there is no connection.")
 
-    def error(self, string):
+    def stderr(self, string):
         self.output({"stderr": string})
-    
+
+    def stdout(self, string):
+        self.output({"stdout" :string})
+
     def output(self, stringOrDict):
         # strings passed to output will be wrapped in an object with key 'stdout'
         newData = stringOrDict if type(stringOrDict) == dict else {"stdout": stringOrDict + '\n'}
