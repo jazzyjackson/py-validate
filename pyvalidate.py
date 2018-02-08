@@ -141,6 +141,7 @@ class parameters(object):
         # only load connection if database was named. name must correspond with a credentials.ini section.
         if database and dbKeys:
             try:
+                self.database = database # expose database for pdsql_readquery
                 self.conn = database.connect(
                     database=dbKeys['database'],
                     user=dbKeys['user'],
@@ -158,8 +159,8 @@ class parameters(object):
 
 
     def cursor(self): # a getter method to return a database cursor
-        if self.args.get('database'):        
-            return self.conn.cursor()
+        if self.args.get('mysql') or self.args.get('psql'):        
+            return self.conn.cursor() # or maybe I should just 'try'
         else: 
             raise Exception("database parameter was not defined, so there is no connection.")
 
