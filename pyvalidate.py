@@ -2,9 +2,8 @@ from ConfigParser import *
 import os, re, sys, json, io, atexit, boto3
 import time, datetime
 
-APPROOT = os.environ.get('APPROOT') or './' # if APPROOT is not set, 
 config = ConfigParser()
-config.read(APPROOT + 'credentials.ini')
+config.read('/credentials.ini')
 
 keys = {}
 for section in config.sections():
@@ -14,6 +13,7 @@ for section in config.sections():
 class parameters(object):
     def __init__(self, args):
         try:
+            # would be nice that if json.loads fails, just set that value as 'input.stdin' - if that matches your required object your fine for one parameters. just make sure its passed as one parameter.
             # should also read stdin, allowing the JSON to be posted as the body of an HTTP request.
             # stdin = readline
             self.args = args
