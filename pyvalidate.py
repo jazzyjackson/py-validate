@@ -1,16 +1,24 @@
-import ConfigParser
-import os, re, sys, json, io, atexit
+from ConfigParser import *
+import os, re, sys, json, io, atexit, boto3
 import time, datetime
 
-APPROOT = os.environ.get('APPROOT') or '.' # if APPROOT is not set, 
+APPROOT = os.environ.get('APPROOT') or './' # if APPROOT is not set, 
+config = ConfigParser()
+config.read(APPROOT + 'credentials.ini')
+
+keys = {}
+for section in config.sections():
+    sect_dict = dict(config.items(section))
+    keys[section.lower()] = sect_dict
+
 class parameters(object):
     def __init__(self, args):
         try:
             # should also read stdin, allowing the JSON to be posted as the body of an HTTP request.
             # stdin = readline
             self.args = args
-            self.result = {}
-            self.input = json.loads(sys.argv[1] if len(sys.argv) == 2 else "{}") # incase no object was passed
+            self.result = {'stdin': sys.argv[1] if len(sys.argv) == 2 else "{}"} # incase no object was passed
+            self.input = json.loads(self.result['stdin']) 
             self.typecast = {
                 # type is HTML form input type : followed by python type. file buffers are streams, s3 is an s3Object: .put(Body=STINGIO) to upload
                 'number::int':   lambda x: int(x),
@@ -26,7 +34,10 @@ class parameters(object):
                 'file::buffer':  lambda x: io.open(x, mode='rt'), # if form input was a file, open file for reading
                 # text input for name of s3 output, file s3 for s3 file to read. 
                 # 'text:s3':      lambda x: boto3.resource('s3').GetObject(x.split('/')[0], x.split('/')[1:]) # should be able to READ this!
-                'file::s3':      lambda x: boto3.resource('s3').Object(x.split('/')[0], x.split('/')[1:]),    # you can .put(Body=STRING.IO) to thing!
+                'text::s3':      lambda x: boto3.resource('s3', 
+                                                aws_access_key_id=keys['s3']['aws_access_key_id'], 
+                                                aws_secret_access_key=keys['s3']['aws_secret_access_key']
+                                            ).Object(keys['s3']['bucket'], '%sid/%s/%s' % (keys['s3']['prefix'], os.environ.get('USER','undefined'), x)),    # you can .put(Body=STRING.IO) to thing!
             
                 'date::date':    lambda x: datetime.datetime.strptime(x,'%Y-%m-%d'),
             }
@@ -38,22 +49,20 @@ class parameters(object):
                 # and its useful as feedback too - what values were used
                 # if you sent a key with a typo, you will see its value is undefined
                 # defaulting to empty dict so double get doesn't throw error on nonexistant keys
-                if(self.args.get('required', {}).get(key) != None):
+                if self.args.get('required', {}).get(key):
                     self.args['required'][key]['value'] = self.input[key]
-                if(self.args.get('optional',{}).get(key) != None):
+                if self.args.get('optional', {}).get(key):
                     self.args['optional'][key]['value'] = self.input[key]
             # try to access each required property in the input json
             for key in self.args.get('required', {}):
-                # print(self.args.get('required',{}).get(key, {}).get('value'))
-                # requiredInput = self.args.get('required',{}).get(key, {}).get('value')
                 requiredInput = self.input.get(key)
                 inputValue = None
                 inputType = self.args['required'][key]['type'] # if there's no type, should throw error, malformed input
-                # this if/if/else/else/if/else either sets input value or throws an error. godspeed.
-                if(requiredInput == None):
+                # this if not/if/else/else/if/else either sets input value or throws an error. godspeed.
+                if not requiredInput:
                     if self.args.get('required',{}).get(key, {}).get('value', None):
                         inputValue = self.args['required'][key]['value']
-                        self.stdout("Using '" + inputValue + "' for " + key + "\n") 
+                        self.stdout("Using '" + inputValue + "' for " + key + "\n")
                     else:
                         raise KeyError(key + " is a required parameter.")
                 else:
@@ -69,9 +78,10 @@ class parameters(object):
                     else:
                         inputValue = match[0]
                     
-                # addtionally, overwrite our input with what the regex extracted
-                # so your regex can actually pull out valid matches
-                self.__dict__[key] = self.typecast[inputType](inputValue)
+                # only invoke the functions if we're not echoing
+                # otherwise if we're dealing in s3 it's gonna open connections
+                if not self.input.get('echo'):
+                    self.__dict__[key] = self.typecast[inputType](inputValue)
         
             for key in self.args.get('optional', {}):
                 optionalInput = self.input.get(key)
@@ -88,7 +98,9 @@ class parameters(object):
 
                 inputType = self.args['optional'][key]['type']
                 inputValue = match[0]
-                self.__dict__[key] = self.typecast[inputType](inputValue)
+                if not self.input.get('echo'):
+                    self.__dict__[key] = self.typecast[inputType](inputValue)
+
         except SyntaxError as e:
             self.stderr(str(e))
             self.output(self.args)
@@ -117,30 +129,36 @@ class parameters(object):
         # and retuning required/optional parameters
 
         database = None # database defaults to none if psql or mysql database is not named
+        dbKeys = {}
         # thankfully psycopg2 and pymysql use the same query api
-        if self.args.get('psql') != None:
+        if self.args.get('psql'):
             import psycopg2 as database
-        elif self.args.get('mysql') != None:
+            dbKeys = keys.get(self.args['psql'])
+        elif self.args.get('mysql'):
             import pymysql as database
+            dbKeys = keys.get(self.args['mysql'])
 
-        if(database): # only load connection if database was named. name must correspond with a credentials.ini section.
-            dbKeys = ConfigParser.ConfigParser()
-            dbKeys.read('credentials.ini') # assumed that working directory is location of spider is location of credentials...
+        # only load connection if database was named. name must correspond with a credentials.ini section.
+        if database and dbKeys:
             try:
-                self.conn = psycopg2.connect("dbname='%(database)s' port='%(port)s' user='%(user)s' \
-                    host='%(host)s' password='%(password)s'" % dict(dbKeys.items(database)))
-                self.output("Connection Established")
+                self.conn = database.connect(
+                    database=dbKeys['database'],
+                    user=dbKeys['user'],
+                    host=dbKeys['host'],
+                    password=dbKeys['password']
+                )
+                self.stdout("Connection Established")
             except:
                 self.stderr("Unable to connect to the database")
                 sys.exit()
         # here would be a good place to stop 
-        if(self.input.get('echo', None)):
-            self.output(self.args)            
+        if self.input.get('echo', None):
+            self.output(self.args)
             sys.exit()
 
 
     def cursor(self): # a getter method to return a database cursor
-        if(self.args.get('database')):        
+        if self.args.get('database'):        
             return self.conn.cursor()
         else: 
             raise Exception("database parameter was not defined, so there is no connection.")
@@ -167,17 +185,14 @@ class parameters(object):
         # useful for streaming API
         if os.environ.get('PYTHONUNBUFFERED'):
             print(json.dumps(newData))
-        elif len(atexit._exithandlers) == 0:
+        else:
             atexit.register(self.outputOnExit)
 
     def get(self, key, default):
         return self.__dict__.get(key, default)
     
     def outputOnExit(self):
-        print(json.dumps(self.result))
-# it'd be pretty cool if self checked the PYTHONUNBUFFERED variable, 
-# and its assumed that pyvalidate is running inside an event based API if output is unbuffed
-# and prints every time output is called, 
-# but if PYTHONUNBUFFERED was unset, then assume that self is a post request that needs to be answered 
-# with a single JSON object, so, accumulate messages to stdout, print it all on exit
-# atexit.register(outputAll), something like that
+        if self.result:
+            print(json.dumps(self.result))
+            self.result = None # invalidate object so it only happens once
+    
