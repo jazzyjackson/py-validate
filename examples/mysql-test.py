@@ -14,7 +14,7 @@ valid = pyvalidate.parameters({
     }
 })
 
-mysql = valid.cursor()
+mysql = valid.database.cursor()
 
 mysql.execute("SELECT * FROM aubi_utilities")
 df = pandas.DataFrame(list(mysql.fetchall()))

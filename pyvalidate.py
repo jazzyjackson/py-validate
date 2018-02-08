@@ -133,6 +133,7 @@ class parameters(object):
         # and retuning required/optional parameters
 
         database = None # database defaults to none if psql or mysql database is not named
+        self.database = None
         dbKeys = {}
         # thankfully psycopg2 and pymysql use the same query api
         if self.args.get('psql'):
@@ -145,30 +146,27 @@ class parameters(object):
         # only load connection if database was named. name must correspond with a credentials.ini section.
         if database and dbKeys:
             try:
-                self.database = database # expose database for pdsql_readquery
-                self.conn = database.connect(
+                self.database = database.connect(
                     database=dbKeys['database'],
                     user=dbKeys['user'],
                     host=dbKeys['host'],
                     password=dbKeys['password'],
-                    port=dbKeys['port']
+                    port=int(dbKeys['port'])
                 )
                 self.stdout("Connection Established")
-            except:
+            except Exception as e:
                 self.stderr("Unable to connect to the database")
+                self.stderr(str(e))
                 sys.exit()
         # here would be a good place to stop 
         if self.input.get('echo', None):
             self.output(self.args)
             sys.exit()
 
-
-    def cursor(self): # a getter method to return a database cursor
-        if self.args.get('mysql') or self.args.get('psql'):        
-            return self.conn.cursor() # or maybe I should just 'try'
-        else: 
-            raise Exception("database parameter was not defined, so there is no connection.")
-
+    #####  end of constructor ######
+    def get(self, key, default):
+        return self.__dict__.get(key, default)
+    
     def stderr(self, string):
         self.output({"stderr": string})
 
@@ -194,9 +192,6 @@ class parameters(object):
         else:
             atexit.register(self.outputOnExit)
 
-    def get(self, key, default):
-        return self.__dict__.get(key, default)
-    
     def outputOnExit(self):
         if self.result:
             print(json.dumps(self.result))
