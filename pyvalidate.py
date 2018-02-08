@@ -22,7 +22,7 @@ class parameters(object):
                 'text::bool':    lambda x: True if x.lower() == 'true' else False,
 
                 # text input for name of output, file input for file to read from
-                'text::buffer':  lambda x: io.open(x, mode='wt'), # if form input was text, open file for writing
+                'text::buffer':  lambda x: io.open(x, mode='wb'), # if form input was text, open file for writing
                 'file::buffer':  lambda x: io.open(x, mode='rt'), # if form input was a file, open file for reading
                 # text input for name of s3 output, file s3 for s3 file to read. 
                 # 'text:s3':      lambda x: boto3.resource('s3').GetObject(x.split('/')[0], x.split('/')[1:]) # should be able to READ this!
