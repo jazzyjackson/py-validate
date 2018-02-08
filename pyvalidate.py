@@ -18,7 +18,11 @@ class parameters(object):
             # stdin = readline
             self.args = args
             self.result = {'stdin': sys.argv[1] if len(sys.argv) == 2 else "{}"} # incase no object was passed
-            self.input = json.loads(self.result['stdin']) 
+            try:
+                self.input = json.loads(self.result['stdin'])
+            except:
+                self.input = {'stdin': self.result['stdin']}
+                
             self.typecast = {
                 # type is HTML form input type : followed by python type. file buffers are streams, s3 is an s3Object: .put(Body=STINGIO) to upload
                 'number::int':   lambda x: int(x),
@@ -146,7 +150,8 @@ class parameters(object):
                     database=dbKeys['database'],
                     user=dbKeys['user'],
                     host=dbKeys['host'],
-                    password=dbKeys['password']
+                    password=dbKeys['password'],
+                    port=dbKeys['port']
                 )
                 self.stdout("Connection Established")
             except:
