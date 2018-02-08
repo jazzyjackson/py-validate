@@ -52,7 +52,7 @@ class parameters(object):
                 match = checkArgs.findall(self.input[key])
                 if(len(match) == 0):
                     raise SyntaxError(self.input[key] + ' did not appear to be ' 
-                                                        + self.args['required'][key]['desc'] 
+                                                        + self.args['required'][key]['info'] 
                                                         + '\nRegex Failed To Match:\n' 
                                                         + self.args['required'][key]['verify']
                                                         + '\n' + self.args['required'][key].get('help','') + '\n')
@@ -77,7 +77,7 @@ class parameters(object):
 
                 inputType = self.args['optional'][key]['type']
                 inputValue = match[0]
-                self.__dict__[key] = self.convert[inputType](inputValue)
+                self.__dict__[key] = self.typecast[inputType](inputValue)
         except SyntaxError as e:
             self.stderr(str(e))
             self.output(self.args)
