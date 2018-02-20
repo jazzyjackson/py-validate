@@ -1,5 +1,6 @@
 from ConfigParser import *
-import os, re, sys, json, io, atexit, boto3
+import os, re, sys, json, io, atexit
+import boto3
 import time, datetime
 
 config = ConfigParser()
@@ -18,6 +19,7 @@ class parameters(object):
             # stdin = readline
             self.args = args
             self.result = {'stdin': sys.argv[1] if len(sys.argv) == 2 else "{}"} # incase no object was passed
+            # self.result['access'] = config.sections() #optional, confirm credentials.ini has been read
             try:
                 self.input = json.loads(self.result['stdin'])
             except:
@@ -27,23 +29,26 @@ class parameters(object):
                 # type is HTML form input type : followed by python type. file buffers are streams, s3 is an s3Object: .put(Body=STINGIO) to upload
                 'number::int':   lambda x: int(x),
                 'number::float': lambda x: float(x),
+
+                'date::date':    lambda x: datetime.datetime.strptime(x,'%Y-%m-%d'),                
                 
                 'text::str':     lambda x: str(x),
                 'text::unicode': lambda x: unicode(x),
                 'text::tuple':   lambda x: tuple([i.strip() for i in x.split(',')]),
                 'text::bool':    lambda x: True if x.lower() == 'true' else False,
-
-                # text input for name of output, file input for file to read from
-                'text::buffer':  lambda x: io.open(x, mode='wb'), # if form input was text, open file for writing
-                'file::buffer':  lambda x: io.open(x, mode='rt'), # if form input was a file, open file for reading
-                # text input for name of s3 output, file s3 for s3 file to read. 
-                # 'text:s3':      lambda x: boto3.resource('s3').GetObject(x.split('/')[0], x.split('/')[1:]) # should be able to READ this!
-                'text::s3':      lambda x: boto3.resource('s3', 
-                                                aws_access_key_id=keys['s3']['aws_access_key_id'], 
-                                                aws_secret_access_key=keys['s3']['aws_secret_access_key']
+                
+                'file::buffer':  lambda x: io.open(x, mode='rt'), # named input, assumes file exists, renders as file upload form, open file for reading
+                'text::buffer':  lambda x: io.open(x, mode='wb'), # named output, creates a new file (or overwrites existing), renders as text input, open file for writing
+                
+                'file::s3':      lambda x: boto3.resource('s3' # named input, assumes object exists
+                                                aws_access_key_id=keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
+                                                aws_secret_access_key=keys.get('s3').get('aws_secret_access_key')
+                                            ).GetObject(x.split('/')[0], x.split('/')[1:]) # should be able to READ this!
+                'text::s3':      lambda x: boto3.resource('s3', # named output, creates new object
+                                                aws_access_key_id=keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
+                                                aws_secret_access_key=keys.get('s3').get('aws_secret_access_key')
                                             ).Object(keys['s3']['bucket'], '%sid/%s/%s' % (keys['s3']['prefix'], os.environ.get('USER','undefined'), x)),    # you can .put(Body=STRING.IO) to thing!
             
-                'date::date':    lambda x: datetime.datetime.strptime(x,'%Y-%m-%d'),
             }
 
             for key in self.input:
@@ -153,12 +158,13 @@ class parameters(object):
                     password=dbKeys['password'],
                     port=int(dbKeys['port'])
                 )
+                # if I didn't have to coerce port into int I could do database.connect(**dbKeys)
                 self.stdout("Connection Established")
             except Exception as e:
                 self.stderr("Unable to connect to the database")
                 self.stderr(str(e))
                 sys.exit()
-        # here would be a good place to stop 
+        # here would be a good place to stop, don't run program if echo param is set
         if self.input.get('echo', None):
             self.output(self.args)
             sys.exit()
