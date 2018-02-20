@@ -21,7 +21,7 @@ valid = pyvalidate.parameters({
             "placeholder":"for example: 5",
             "verify":"^\d+$"
         },
-        "s3Object": {
+        "s3upload": {
             "info": "Where should the result be saved?",
             "type": "text::s3",
             "value": 'example' + str(int(time.time())) + '.csv',
@@ -39,16 +39,7 @@ valid = pyvalidate.parameters({
 })
 # Guassian distribution
 samples = pandas.DataFrame(numpy.random.rand(valid.rows, valid.cols))
-fileBody = StringIO.StringIO()
-samples.to_csv(
-    fileBody, # note that pyvalidate currently writes bytes! not unicode... python2 thing :(
-    index=valid.get('labels', False),
-    header=valid.get('labels', False),
-)
-fileBody.seek(0)
-valid.s3Object.put(Body=fileBody)
+valid.s3upload.put(Body=samples.to_csv())
+
 fulls3path = '/id/%s/%s' % (os.environ.get('USER', 'undefined'), valid.args['required']['s3Object']['value'])
 valid.output({'downloads3': fulls3path})
-
-### declare StringIO, save to stream, seek(0)....
-### streams might allow for less memory usage, if I figure out how to do it async. 
