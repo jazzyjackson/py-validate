@@ -13,17 +13,17 @@ for section in config.sections():
 
 class parameters(object):
     def __init__(self, args):
+    # if at first you don't succeed,
         try:
-            # would be nice that if json.loads fails, just set that value as 'input.stdin' - if that matches your required object your fine for one parameters. just make sure its passed as one parameter.
-            # should also read stdin, allowing the JSON to be posted as the body of an HTTP request.
-            # stdin = readline
-            self.args = args
-            self.result = {'stdin': sys.argv[1] if len(sys.argv) == 2 else "{}"} # incase no object was passed
-            # self.result['access'] = config.sections() #optional, confirm credentials.ini has been read
             try:
+	      # again
                 self.input = json.loads(self.result['stdin'])
             except:
                 self.input = {'stdin': self.result['stdin']}
+		
+            self.args = args
+            self.result = {'stdin': sys.argv[1] if len(sys.argv) == 2 else "{}"} # incase no object was passed
+            # self.result['access'] = config.sections() #optional, confirm credentials.ini has been read
                 
             self.typecast = {
                 # type is HTML form input type : followed by python type. file buffers are streams, s3 is an s3Object: .put(Body=STINGIO) to upload
