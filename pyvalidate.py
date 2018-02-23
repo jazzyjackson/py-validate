@@ -6,6 +6,8 @@ import time, datetime
 config = ConfigParser()
 config.read('/credentials.ini')
 
+# would be nice to to have a common interface whether key:value pairs are environment variables or on a config.ini file
+# that way you could run the command from an HTTP request carrying '$SECRET=1234' as a header so that passwords are available for this command and this command only
 keys = {}
 for section in config.sections():
     sect_dict = dict(config.items(section))
