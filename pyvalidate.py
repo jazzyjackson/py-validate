@@ -45,11 +45,11 @@ class parameters(object):
                 'file::s3':      lambda x: boto3.resource('s3' # named input, assumes object exists
                                                 aws_access_key_id=keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
                                                 aws_secret_access_key=keys.get('s3').get('aws_secret_access_key')
-                                            ).GetObject(x.split('/')[0], x.split('/')[1:]) # should be able to READ this!
+                                            ).GetObject(x.split('/')[0], x.split('/')[1:]), # should be able to READ this!
                 'text::s3':      lambda x: boto3.resource('s3', # named output, creates new object
                                                 aws_access_key_id=keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
                                                 aws_secret_access_key=keys.get('s3').get('aws_secret_access_key')
-                                            ).Object(keys['s3']['bucket'], '%sid/%s/%s' % (keys['s3']['prefix'], os.environ.get('USER','undefined'), x)),    # you can .put(Body=STRING.IO) to thing!
+                                            ).Object(keys['s3']['bucket'], '%sid/%s/%s' % (keys['s3']['prefix'], os.environ.get('USER','undefined'), x))    # you can .put(Body=STRING.IO) to thing!
             
             }
 
