@@ -17,16 +17,11 @@ class parameters(object):
     def __init__(self, args):
     # if at first you don't succeed,
         try:
-            try:
-	      # again
-                self.input = json.loads(self.result['stdin'])
-            except:
-                self.input = {'stdin': self.result['stdin']}
-		
             self.args = args
-            self.result = {'stdin': sys.argv[1] if len(sys.argv) == 2 else "{}"} # incase no object was passed
-            # self.result['access'] = config.sections() #optional, confirm credentials.ini has been read
-                
+            # input is assumed to be JSON string piped to stdin. If stdin is a terminal, this skips right over, defaulting to an empty JSON object.
+            # when called as subprocess in a larger server, isatty will also be false, so it will attempt to read stdin, which will block if there's no end byte available. So pipe a null char for goodness sake.
+            self.result = {'stdin': sys.stdin.read() if not sys.stdin.isatty() else "{}" }
+            self.input = json.loads(self.result.get('stdin'))
             self.typecast = {
                 # type is HTML form input type : followed by python type. file buffers are streams, s3 is an s3Object: .put(Body=STINGIO) to upload
                 'number::int':   lambda x: int(x),
