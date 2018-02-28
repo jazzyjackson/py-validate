@@ -42,7 +42,7 @@ class parameters(object):
                 'file::buffer':  lambda x: io.open(x, mode='rt'), # named input, assumes file exists, renders as file upload form, open file for reading
                 'text::buffer':  lambda x: io.open(x, mode='wb'), # named output, creates a new file (or overwrites existing), renders as text input, open file for writing
                 
-                'file::s3':      lambda x: boto3.resource('s3' # named input, assumes object exists
+                'file::s3':      lambda x: boto3.resource('s3', # named input, assumes object exists
                                                 aws_access_key_id=keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
                                                 aws_secret_access_key=keys.get('s3').get('aws_secret_access_key')
                                             ).GetObject(x.split('/')[0], x.split('/')[1:]), # should be able to READ this!
