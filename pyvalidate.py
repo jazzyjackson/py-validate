@@ -3,9 +3,9 @@ import os, re, sys, json, io, atexit
 import boto3
 import time, datetime
 
-config = ConfigParser()
-config.read('/credentials.ini')
 
+config = ConfigParser()
+config.read('/serverbase.cfg')
 # would be nice to to have a common interface whether key:value pairs are environment variables or on a config.ini file
 # that way you could run the command from an HTTP request carrying '$SECRET=1234' as a header so that passwords are available for this command and this command only
 keys = {}
@@ -18,6 +18,7 @@ class parameters(object):
     # if at first you don't succeed,
         try:
             self.args = args
+            self.keys = keys
             # input is assumed to be JSON string piped to stdin. If stdin is a terminal, this skips right over, defaulting to an empty JSON object.
             # when called as subprocess in a larger server, isatty will also be false, so it will attempt to read stdin, which will block if there's no end byte available. So pipe a null char for goodness sake.
             self.result = {'stdin': sys.stdin.read() if not sys.stdin.isatty() else "{}" }
@@ -38,13 +39,13 @@ class parameters(object):
                 'text::buffer':  lambda x: io.open(x, mode='wb'), # named output, creates a new file (or overwrites existing), renders as text input, open file for writing
                 
                 'file::s3':      lambda x: boto3.resource('s3', # named input, assumes object exists
-                                                aws_access_key_id=keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
-                                                aws_secret_access_key=keys.get('s3').get('aws_secret_access_key')
+                                                aws_access_key_id=self.keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
+                                                aws_secret_access_key=self.keys.get('s3').get('aws_secret_access_key')
                                             ).GetObject(x.split('/')[0], x.split('/')[1:]), # should be able to READ this!
                 'text::s3':      lambda x: boto3.resource('s3', # named output, creates new object
-                                                aws_access_key_id=keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
-                                                aws_secret_access_key=keys.get('s3').get('aws_secret_access_key')
-                                            ).Object(keys['s3']['bucket'], '%sid/%s/%s' % (keys['s3']['prefix'], os.environ.get('USER','undefined'), x))    # you can .put(Body=STRING.IO) to thing!
+                                                aws_access_key_id=self.keys.get('s3').get('aws_access_key_id'), # defaults to None, should look for access key via env or IAM
+                                                aws_secret_access_key=self.keys.get('s3').get('aws_secret_access_key')
+                                            ).Object(self.keys['s3']['bucket'], '%sid/%s/%s' % (self.keys['s3']['prefix'], os.environ.get('USER','undefined'), x))    # you can .put(Body=STRING.IO) to thing!
             
             }
 
@@ -61,7 +62,7 @@ class parameters(object):
                     self.args['optional'][key]['value'] = self.input[key]
             # try to access each required property in the input json
             for key in self.args.get('required', {}):
-                requiredInput = self.input.get(key)
+                requiredInput = str(self.input.get(key))
                 inputValue = None
                 inputType = self.args['required'][key]['type'] # if there's no type, should throw error, malformed input
                 # this if not/if/else/else/if/else either sets input value or throws an error. godspeed.
@@ -90,10 +91,9 @@ class parameters(object):
                     self.__dict__[key] = self.typecast[inputType](inputValue)
         
             for key in self.args.get('optional', {}):
-                optionalInput = self.input.get(key)
+                optionalInput = str(self.input.get(key))
                 if(optionalInput == None):
                     continue # skip regex check if nothing is there, continue to next key
-                self.stdout("Using '" + self.input[key] + "' for " + key + "\n")
                 checkArgs = re.compile(self.args['optional'][key]['verify'])
                 match = checkArgs.findall(self.input[key])
                 if(len(match) == 0):
@@ -145,7 +145,7 @@ class parameters(object):
             import pymysql as database
             dbKeys = keys.get(self.args['mysql'])
 
-        # only load connection if database was named. name must correspond with a credentials.ini section.
+        # only load connection if database was named. name must correspond with a serverbase.cfg section.
         if database and dbKeys:
             try:
                 self.database = database.connect(
