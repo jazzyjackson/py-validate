@@ -76,6 +76,7 @@ class parameters(object):
                 else:
                     self.stdout("Using '" + requiredInput + "' for " + key + "\n")
                     if('verify' not in self.args['required'][key]):
+                        inputValue = requiredInput
                         continue
                     checkArgs = re.compile(self.args['required'][key]['verify'])
                     match = checkArgs.findall(requiredInput)
