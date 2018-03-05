@@ -77,21 +77,20 @@ class parameters(object):
                     self.stdout("Using '" + requiredInput + "' for " + key + "\n")
                     if('verify' not in self.args['required'][key]):
                         inputValue = requiredInput
-                        continue
-                    checkArgs = re.compile(self.args['required'][key]['verify'])
-                    match = checkArgs.findall(requiredInput)
-                    if(len(match) == 0):
-                        raise SyntaxError(requiredInput + ' did not appear to be ' 
-                                                            + self.args['required'][key]['info'] 
-                                                            + '\nRegex Failed To Match:\n' 
-                                                            + self.args['required'][key]['verify']
-                                                            + '\n' + self.args['required'][key].get('help','') + '\n')
                     else:
-                        inputValue = match[0]
-                    
+                        checkArgs = re.compile(self.args['required'][key]['verify'])
+                        match = checkArgs.findall(requiredInput)
+                        if(len(match) == 0):
+                            raise SyntaxError(requiredInput + ' did not appear to be ' 
+                                                                + self.args['required'][key]['info'] 
+                                                                + '\nRegex Failed To Match:\n' 
+                                                                + self.args['required'][key]['verify']
+                                                                + '\n' + self.args['required'][key].get('help','') + '\n')
+                        else:
+                            inputValue = match[0]
                 # only invoke the functions if we're not echoing
                 # otherwise if we're dealing in s3 it's gonna open connections
-                if not self.input.get('echo'):
+                if 'echo' not in self.input:
                     self.__dict__[key] = self.typecast[inputType](inputValue)
         
             for key in self.args.get('optional', {}):
