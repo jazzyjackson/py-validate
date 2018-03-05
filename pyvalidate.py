@@ -75,6 +75,8 @@ class parameters(object):
                         raise KeyError(key + " is a required parameter.")
                 else:
                     self.stdout("Using '" + requiredInput + "' for " + key + "\n")
+                    if('verify' not in self.args['required'][key]):
+                        continue
                     checkArgs = re.compile(self.args['required'][key]['verify'])
                     match = checkArgs.findall(requiredInput)
                     if(len(match) == 0):
