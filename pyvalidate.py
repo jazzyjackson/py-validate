@@ -1,7 +1,7 @@
 from ConfigParser import *
 import os, re, sys, json, io, atexit
 import boto3
-import time, datetime
+import time, datetime, traceback
 
 
 config = ConfigParser()
@@ -62,7 +62,8 @@ class parameters(object):
                     self.args['optional'][key]['value'] = self.input[key]
             # try to access each required property in the input json
             for key in self.args.get('required', {}):
-                requiredInput = str(self.input.get(key))
+                # the key may exist in input, or it may have been defined in the required object
+                requiredInput = str(self.input.get(key) or self.args['required'][key]['value'])
                 inputValue = None
                 inputType = self.args['required'][key]['type'] # if there's no type, should throw error, malformed input
                 # this if not/if/else/else/if/else either sets input value or throws an error. godspeed.
@@ -73,11 +74,11 @@ class parameters(object):
                     else:
                         raise KeyError(key + " is a required parameter.")
                 else:
-                    self.stdout("Using '" + self.input[key] + "' for " + key + "\n")
+                    self.stdout("Using '" + requiredInput + "' for " + key + "\n")
                     checkArgs = re.compile(self.args['required'][key]['verify'])
-                    match = checkArgs.findall(self.input[key])
+                    match = checkArgs.findall(requiredInput)
                     if(len(match) == 0):
-                        raise SyntaxError(self.input[key] + ' did not appear to be ' 
+                        raise SyntaxError(requiredInput + ' did not appear to be ' 
                                                             + self.args['required'][key]['info'] 
                                                             + '\nRegex Failed To Match:\n' 
                                                             + self.args['required'][key]['verify']
@@ -108,23 +109,34 @@ class parameters(object):
                     self.__dict__[key] = self.typecast[inputType](inputValue)
 
         except SyntaxError as e:
+            self.stderr("SYNTAXERROR")
             self.stderr(str(e))
             self.output(self.args)
+            traceback.print_exc()
             sys.exit()
         except IndexError as e:
+            self.stderr("INDEXERROR")
+            self.stderr(str(e))            
             # IndexError means sys.argv didn't hear anything, return argument object
             self.output(self.args)
+            traceback.print_exc()
             sys.exit() 
         except KeyError as e:
+            self.stderr("KEYERROR")
             self.stderr(str(e))
             self.output(self.args)
+            traceback.print_exc()
             sys.exit()
         except ValueError as e:
+            self.stderr("VALUEERROR")
             # this means invalid JSON was passed, I think...
             self.stderr(str(e))
             self.output(self.args)
+            traceback.print_exc()
             sys.exit()
         except SyntaxWarning as e:
+            self.stderr("SYNTAXWARNING")
+            
             # print warnings to stderr, they should get displayed but the script will still run
             self.stderr(str(e))
             # Don't exit for SyntaxWarning, just print to stderr
