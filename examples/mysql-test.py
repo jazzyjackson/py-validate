@@ -3,14 +3,14 @@ import pymysql, pandas, os
 import pyvalidate
 
 valid = pyvalidate.parameters({
-    "mysql": "labsdb",
-    "required": {
-        "s3upload": {
-            "type": "text::s3",
-            "info": "Where should the result be saved?",
-            "value": 'aubi_utilties.csv',
-            "verify": "^[A-Za-z0-9._]+$" # restrict filename if you want
-        }
+    "database":{
+        "mysql": "labsdb"
+    },
+    "s3upload": {
+        "type": "text::s3",
+        "info": "Where should the result be saved?",
+        "value": 'aubi_utilties.csv',
+        "verify": "^[A-Za-z0-9._]+$" # restrict filename if you want
     }
 })
 
