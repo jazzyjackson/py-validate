@@ -21,4 +21,4 @@ df = pandas.DataFrame(list(mysql.fetchall()))
 valid.s3upload.put(Body=df.to_csv())
 
 fulls3path = '/id/%s/%s' % (os.environ.get('USER', 'undefined'), valid.args['required']['s3upload']['value'])
-valid.output({'downloads3': fulls3path})
+valid.output({'downloads3': fulls3path}) blah blah
