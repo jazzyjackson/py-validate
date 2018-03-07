@@ -18,7 +18,6 @@ class parameters(object):
         self.result = {'stdin': sys.stdin.read() if not sys.stdin.isatty() else "{}" }
         self.input = json.loads(self.result.get('stdin'))
         self.typecast = {
-            # type is HTML form input type : followed by python type. file buffers are streams, s3 is an s3Object: .put(Body=STINGIO) to upload
             'number::int':   lambda x: int(x),
             'number::float': lambda x: float(x),
 
@@ -32,9 +31,8 @@ class parameters(object):
             'file::buffer':  lambda x: io.open(x, mode='rt'), # named input, assumes file exists, renders as file upload form, open file for reading
             'text::buffer':  lambda x: io.open(x, mode='wb'), # named output, creates a new file (or overwrites existing), renders as text input, open file for writing
                                 # would be nice to add a getter for 'this.s3.GetObject...' 'this.s3.Object()' to stick the key getting somewhere else
-            'file::s3':      lambda x: self.s3().get('readable')(x), # should be able to READ this!
-            'text::s3':      lambda x: self.s3().get('writable')(x)
-        
+            'file::s3':      lambda x: self.s3Object(x) # appended to bucket + prefix to return object
+            'text::s3':      lambda x: self.s3Object('id/' + os.environ('USER', 'nobody') + '/' + x) # create new object in id/ subdirectory
         }
         # Evaluate each of the keys
         # Check if there's a database, check if connection can be established
@@ -68,20 +66,16 @@ class parameters(object):
     def get(self, key, default):
         return self.__dict__.get(key, default)
 
-    def s3(self):
-        bucket = self.keys['s3']['bucket']
-        prefix = self.keys['s3']['prefix']
-        dest_key = prefix + 'id/' + os.environ.get('USER','nobody') + '/'
+    def s3Object(self, keyname):
         resource = boto3.resource('s3',
             aws_access_key_id=self.keys['s3']['aws_access_key_id'],
             aws_secret_access_key=self.keys['s3']['aws_secret_access_key']
         )
-        return {
-            # readable takes a full path and splits it into bucket / prefix...
-            'readable': lambda x: resource.GetObject(x.split('/')[0], x.split('/')[1:]),
-            # writeable defines a destination  # you can .put(Body=STRING.IO) to thing!
-            'writable': lambda x: resource.Object(bucket, dest_key + x)
-        }
+        bucket = self.keys['s3']['bucket']
+        prefix = self.keys['s3']['prefix']
+        s3obj = resource.Object(bucket, prefix + keyname)
+        s3obj.pathname = bucket + '/' + prefix + keyname
+        return s3obj
 
     def stderr(self, data):
         self.output({"stderr": str(data) + '\n'})
@@ -121,7 +115,7 @@ class parameters(object):
         # thankfully psycopg2 and pymysql use the same query api
         if databaseDict.get('psql'):
             import psycopg2 as database
-            dbKeys = self.keys.get(databaseDict['psql'])
+            dbKeys = self.keys.get(databaseDict['psql']) # databaseDict['psql'] should be the name of the config section with the connection parameters
         elif databaseDict.get('mysql'):
             import pymysql as database
             dbKeys = self.keys.get(databaseDict['mysql'])
