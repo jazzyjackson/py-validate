@@ -31,8 +31,8 @@ class parameters(object):
             'file::buffer':  lambda x: io.open(x, mode='rt'), # named input, assumes file exists, renders as file upload form, open file for reading
             'text::buffer':  lambda x: io.open(x, mode='wb'), # named output, creates a new file (or overwrites existing), renders as text input, open file for writing
                                 # would be nice to add a getter for 'this.s3.GetObject...' 'this.s3.Object()' to stick the key getting somewhere else
-            'file::s3':      lambda x: self.s3Object(x) # appended to bucket + prefix to return object
-            'text::s3':      lambda x: self.s3Object('id/' + os.environ('USER', 'nobody') + '/' + x) # create new object in id/ subdirectory
+            'file::s3':      lambda x: self.s3Object(x),
+            'text::s3':      lambda x: self.s3Object('id/' + os.environ.get('USER', 'nobody') + '/' + x) # create new object in id/ subdirectory
         }
         # Evaluate each of the keys
         # Check if there's a database, check if connection can be established
