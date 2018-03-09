@@ -30,6 +30,6 @@ valid = pyvalidate.parameters({
     }
 })
 # Guassian distribution
-samples = pandas.DataFrame(numpy.random.rand(valid.rows, valid.cols))
+samples = pandas.DataFrame(numpy.random.rand(valid.arg, valid.arg))
 valid.s3upload.put(Body=samples.to_csv())
 valid.output({'downloads3': valid.s3upload.pathname})

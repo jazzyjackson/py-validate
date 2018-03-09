@@ -15,8 +15,8 @@ class parameters(object):
         self.keys = dictFromConfig('/serverbase.cfg')
         # input is assumed to be JSON string piped to stdin. If stdin is a terminal, this skips right over, defaulting to an empty JSON object.
         # when called as subprocess in a larger server, isatty will also be false, so it will attempt to read stdin, which will block if there's no end byte available. So pipe a null char for goodness sake.
-        self.result = {'stdin': sys.stdin.read() if not sys.stdin.isatty() else "{}" }
-        self.input = json.loads(self.result.get('stdin'))
+        self.__result__ = {'stdin': sys.stdin.read() if not sys.stdin.isatty() else "{}" }
+        self.input = json.loads(self.__result__.get('stdin'))
         self.typecast = {
             'number::int':   lambda x: int(x),
             'number::float': lambda x: float(x),
@@ -32,6 +32,7 @@ class parameters(object):
             'text::buffer':  lambda x: io.open(x, mode='wb'), # named output, creates a new file (or overwrites existing), renders as text input, open file for writing
                                 # would be nice to add a getter for 'this.s3.GetObject...' 'this.s3.Object()' to stick the key getting somewhere else
             'file::s3':      lambda x: self.s3Object(x),
+            # 'text::s3':      lambda x: self.s3Object('id/' + os.environ.get('USER', 'nobody') + '/' + x) # create new object in id/ subdirectory
             'text::s3':      lambda x: self.s3Object('id/' + os.environ.get('USER', 'nobody') + '/' + x) # create new object in id/ subdirectory
         }
         # Evaluate each of the keys
@@ -63,6 +64,9 @@ class parameters(object):
                 self.__dict__[key] = self.typecast[argType](argValue)
 
     #####  end of constructor ######
+    def __getitem__(self, key):
+        return self.get(key, None)
+
     def get(self, key, default):
         return self.__dict__.get(key, default)
 
@@ -87,12 +91,12 @@ class parameters(object):
         # strings passed to output will be wrapped in an object with key 'stdout'
         newData = stringOrDict if type(stringOrDict) == dict else {"stdout": stringOrDict + '\n'}
         for key in newData:
-            if self.result.get(key) == None:
+            if self.__result__.get(key) == None:
                 # create key if it doesn't exist
-                self.result[key] = newData[key]
+                self.__result__[key] = newData[key]
             else:
                 # append new data to existing key
-                self.result[key] += newData[key]
+                self.__result__[key] += newData[key]
         # output is buffered by default,
         # if that's the case, wait til program exit to print one single object
         # but if PYTHONUNBUFFERED is specified, print out each piece of data as it comes as separate JSON object
@@ -104,9 +108,9 @@ class parameters(object):
             #would be better to only register once, otherwise this gets called as many times as output was written which is pretty bogus.
     
     def outputOnExit(self):
-        if self.result:
-            print(json.dumps(self.result))
-            self.result = None # invalidate object so it only happens once. 
+        if self.__result__:
+            print(json.dumps(self.__result__))
+            self.__result__ = None # invalidate object so it only happens once. 
     
     def makeDatabaseFrom(self, databaseDict):
         database = None # database defaults to none if psql or mysql database is not named
