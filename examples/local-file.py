@@ -22,7 +22,7 @@ valid = pyvalidate.parameters({
         "info": "Where should the result be saved?",
         "type": "text::buffer",
         "value": 'example' + str(int(time.time())) + '.csv',
-        "verify": "^[A-Za-z0-9]+$" # restrict filename if you want
+        "verify": "^[A-Za-z0-9.-]+$" # restrict filename if you want
     },
     "labels": {
         "type":"text::bool",

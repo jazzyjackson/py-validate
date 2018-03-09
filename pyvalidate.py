@@ -32,7 +32,6 @@ class parameters(object):
             'text::buffer':  lambda x: io.open(x, mode='wb'), # named output, creates a new file (or overwrites existing), renders as text input, open file for writing
                                 # would be nice to add a getter for 'this.s3.GetObject...' 'this.s3.Object()' to stick the key getting somewhere else
             'file::s3':      lambda x: self.s3Object(x),
-            # 'text::s3':      lambda x: self.s3Object('id/' + os.environ.get('USER', 'nobody') + '/' + x) # create new object in id/ subdirectory
             'text::s3':      lambda x: self.s3Object('id/' + os.environ.get('USER', 'nobody') + '/' + x) # create new object in id/ subdirectory
         }
         # Evaluate each of the keys
@@ -55,12 +54,11 @@ class parameters(object):
                     argVerify = re.compile(self.args[key]['verify'])
                     match = argVerify.findall(argValue)
                     if(len(match) == 0):
-                        raise SyntaxError(argValue + ' did not appear to be ' 
-                                                            + self.args[key]['info'] 
-                                                            + '\nRegex Failed To Match:\n' 
-                                                            + self.args[key]['verify']
-                                                            + '\n' + self.args[key].get('help','') + '\n')
-                
+                        raise SyntaxError(key + ' cannot be ' + argValue + '\n'
+                                                            + 'It should be ' + self.args[key]['info'] 
+                                                            + '\nPattern did not match:\n'
+                                                            + self.args[key]['verify'])
+
                 self.__dict__[key] = self.typecast[argType](argValue)
 
     #####  end of constructor ######
