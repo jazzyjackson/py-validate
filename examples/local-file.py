@@ -33,10 +33,9 @@ valid = pyvalidate.parameters({
 })
 # Guassian distribution
 samples = pandas.DataFrame(numpy.random.rand(valid.rows, valid.cols))
-samples.to_csv(
-    valid.file, # note that pyvalidate currently writes bytes! not unicode... python2 thing :(
+valid.file.write(samples.to_csv(
     index=valid.get('labels', False),
     header=valid.get('labels', False),
-)
+))
 
 valid.output({'download': valid.file.name })
