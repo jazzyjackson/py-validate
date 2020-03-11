@@ -1,3 +1,5 @@
+#!/usr/env python27
+# Written back when python 2.7 was cool. just need to replace configparser and StringIO to bring it up to date
 from ConfigParser import *
 import os, re, sys, json, io, atexit
 import boto3
